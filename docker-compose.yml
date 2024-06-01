@@ -5,7 +5,4 @@ services:
     build: .
     ports:
       - "8000:8000"
-    environment:
-      - DOWNLOAD_DIRECTORY=/mnt/downloads
-    volumes:
-      - /home/jnovopacky/project/test_me:/mnt/downloads
+

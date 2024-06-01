@@ -1,26 +1,15 @@
-from fastapi import FastAPI, Form
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi import FastAPI, Form, UploadFile, File
+from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from yt_dlp import YoutubeDL
 import os
-import uuid
-
-
 
 app = FastAPI()
 
-# Nastavení cesty pro ukládání souborů z environmentální proměnné
-DOWNLOAD_DIRECTORY = os.getenv("DOWNLOAD_DIRECTORY", "downloads")
-
 app.mount("/static", StaticFiles(directory="app/static"), name="static")
-app.mount("/downloads", StaticFiles(directory=DOWNLOAD_DIRECTORY), name="downloads")
 
 # Funkce ke stažení audia z dané URL pomocí yt-dlp
 def download_audio(yt_url: str) -> str:
-    unique_id = str(uuid.uuid4())
-    output_dir = os.path.join(DOWNLOAD_DIRECTORY, unique_id)
-    os.makedirs(output_dir, exist_ok=True)
-    
     ydl_opts = {
         'format': 'bestaudio/best',
         'postprocessors': [{
@@ -28,7 +17,7 @@ def download_audio(yt_url: str) -> str:
             'preferredcodec': 'mp3',
             'preferredquality': '192',
         }],
-        'outtmpl': os.path.join(output_dir, '%(title)s.%(ext)s')
+        'outtmpl': 'downloads/%(title)s.%(ext)s'
     }
     
     with YoutubeDL(ydl_opts) as ydl:
@@ -40,10 +29,9 @@ def download_audio(yt_url: str) -> str:
 async def download_file(url: str = Form(...)):
     try:
         filename = download_audio(url)
-        file_url = "/" + filename.replace("\\", "/")
-        return JSONResponse(content={"file_url": file_url})
+        return FileResponse(path=filename, filename=os.path.basename(filename), media_type='audio/mpeg')
     except Exception as e:
-        return JSONResponse(content={"error": str(e)}, status_code=500)
+        return {"error": str(e)}
 
 # Static route for frontend
 @app.get("/")
